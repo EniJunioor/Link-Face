@@ -21,9 +21,10 @@ function isValidCpf(cpf: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { token, name, cpf, photoDataUrl } = await req.json();
+    const { token, name, cpf, photoDataUrl, consentAccepted } = await req.json();
     if (!name || !cpf || !photoDataUrl) return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     if (!isValidCpf(cpf)) return NextResponse.json({ ok: false, error: 'CPF inválido.' }, { status: 422 });
+    if (!consentAccepted) return NextResponse.json({ ok: false, error: 'É necessário aceitar o termo de consentimento para prosseguir.' }, { status: 400 });
 
     if (token) {
       const employee = await findEmployeeByToken(token);
@@ -62,7 +63,8 @@ export async function POST(req: NextRequest) {
       name, 
       cpf, 
       photoPath, 
-      driveFileId: storageFileId 
+      driveFileId: storageFileId,
+      consentAccepted: consentAccepted === true
     });
     
     return NextResponse.json({ 
@@ -70,8 +72,12 @@ export async function POST(req: NextRequest) {
       fileId: storageFileId,
       url: uploadResult.url 
     });
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Erro interno.' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Erro ao processar submissão:', error);
+    return NextResponse.json({ 
+      ok: false, 
+      error: error?.message || 'Erro interno ao processar a solicitação.' 
+    }, { status: 500 });
   }
 }
 

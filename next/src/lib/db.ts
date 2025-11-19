@@ -26,8 +26,20 @@ export function initDb(): void {
       cpf TEXT NOT NULL,
       photo_path TEXT NOT NULL,
       drive_file_id TEXT,
+      consent_accepted INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+  });
+  
+  // Migração: Adiciona coluna consent_accepted se não existir
+  db.all(`PRAGMA table_info(submissions)`, (err, rows: any) => {
+    if (err) return;
+    const columns = Array.isArray(rows) ? rows.map((r: any) => r.name) : [];
+    if (!columns.includes('consent_accepted')) {
+      db.run(`ALTER TABLE submissions ADD COLUMN consent_accepted INTEGER DEFAULT 0`, (alterErr) => {
+        // Ignora erro silenciosamente se a coluna já existir ou outro erro ocorrer
+      });
+    }
   });
 }
 
@@ -40,12 +52,12 @@ export function findEmployeeByToken(token: string): Promise<any | null> {
   });
 }
 
-export function insertSubmission({ employeeToken, name, cpf, photoPath, driveFileId }: { employeeToken: string | null; name: string; cpf: string; photoPath: string; driveFileId?: string | null; }): Promise<number> {
+export function insertSubmission({ employeeToken, name, cpf, photoPath, driveFileId, consentAccepted }: { employeeToken: string | null; name: string; cpf: string; photoPath: string; driveFileId?: string | null; consentAccepted: boolean; }): Promise<number> {
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT INTO submissions (employee_token, name, cpf, photo_path, drive_file_id)
-       VALUES (?, ?, ?, ?, ?)`,
-      [employeeToken, name, cpf, photoPath, driveFileId ?? null],
+      `INSERT INTO submissions (employee_token, name, cpf, photo_path, drive_file_id, consent_accepted)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [employeeToken, name, cpf, photoPath, driveFileId ?? null, consentAccepted ? 1 : 0],
       function onDone(this: sqlite3.RunResult, err: Error | null) {
         if (err) return reject(err);
         resolve(this.lastID);

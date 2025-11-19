@@ -30,6 +30,7 @@ export default function ClientForm() {
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [photoDataUrl, setPhotoDataUrl] = useState<string>('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const [status, setStatus] = useState<{ type: 'idle'|'loading'|'success'|'error'; msg?: string }>({ type: 'idle' });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -89,7 +90,7 @@ export default function ClientForm() {
     return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
   }, []);
 
-  const canSubmit = name.trim().length > 3 && isValidCpf(cpf) && !!photoDataUrl;
+  const canSubmit = name.trim().length > 3 && isValidCpf(cpf) && !!photoDataUrl && consentAccepted;
 
   const submit = useCallback(async () => {
     setStatus({ type: 'loading' });
@@ -97,7 +98,7 @@ export default function ClientForm() {
       const resp = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token || undefined, name: name.trim(), cpf: cpf.replace(/\D/g, ''), photoDataUrl })
+        body: JSON.stringify({ token: token || undefined, name: name.trim(), cpf: cpf.replace(/\D/g, ''), photoDataUrl, consentAccepted })
       });
       const json = await resp.json();
       if (!resp.ok || !json.ok) throw new Error(json.error || 'Falha no envio');
@@ -105,7 +106,7 @@ export default function ClientForm() {
     } catch (e: any) {
       setStatus({ type: 'error', msg: e?.message || 'Erro ao enviar' });
     }
-  }, [token, name, cpf, photoDataUrl]);
+  }, [token, name, cpf, photoDataUrl, consentAccepted]);
 
   return (
     <div className="page-shell">
@@ -165,6 +166,19 @@ export default function ClientForm() {
                     </div>
                   </div>
                 )}
+              </div>
+              <div style={{ marginTop: 16, padding: 16, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={consentAccepted} 
+                    onChange={(e) => setConsentAccepted(e.target.checked)}
+                    style={{ marginTop: 2, cursor: 'pointer', width: 18, height: 18 }}
+                  />
+                  <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                    Autorizo a coleta, armazenamento e a utilização da minha imagem facial exclusivamente para atualização de cadastro e identificação no sistema de registro de ponto eletrônico, conforme a legislação vigente e a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018).
+                  </div>
+                </label>
               </div>
               <button onClick={submit} disabled={!canSubmit || status.type === 'loading'} className="btn btn-primary" style={{ background: canSubmit ? undefined : '#9ca3af' }}>
                 {status.type === 'loading' ? 'Enviando...' : 'Enviar'}
