@@ -1,0 +1,29 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: linear-gradient(135deg, #f6f7fb 0%, #eef1f7 100%); color: CanvasText; overflow-x: hidden; }
+img, video, canvas { max-width: 100%; height: auto; display: block; }
+button { -webkit-tap-highlight-color: transparent; }
+
+/* UI helpers */
+.card { background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); padding: 16px; }
+.btn { border: 0; border-radius: 12px; padding: 11px 14px; font-size: 15px; cursor: pointer; transition: transform .06s ease, box-shadow .12s ease; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+.btn:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; transform: none; }
+.btn-primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; }
+.btn-accent { background: linear-gradient(135deg, #0ea5e9, #14b8a6); color: #fff; }
+.btn-muted { background: #6b7280; color: #fff; }
+.tabs { display:flex; gap:8px; border: 1px solid #e5e7eb; padding:6px; border-radius:12px; background:#f9fafb }
+.tab { flex:1; border:0; border-radius:8px; padding:9px 12px; font-size:15px; cursor:pointer }
+.tab-active { background:#111827; color:#fff }
+
+/* Layout helpers */
+.page-shell { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr; }
+.page-header { position: sticky; top: 0; z-index: 20; background: #ffffffaa; backdrop-filter: saturate(180%) blur(8px); border-bottom: 1px solid #e5e7eb; }
+.page-inner { width: 100%; max-width: 1100px; margin: 0 auto; padding: 12px 16px; }
+.main { display: grid; place-items: center; padding: 16px; }
+.form-wrap { width: 100%; max-width: clamp(360px, 92vw, 560px); display: grid; gap: 12px; }
+
+/* Media box: limita altura para evitar rolagem e tela preta gigante */
+.media-box { border-radius: 12px; background: #000; overflow: hidden; aspect-ratio: 3 / 4; max-height: min(62vh, 540px); }
+
