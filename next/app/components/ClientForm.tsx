@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CameraIcon, UploadIcon, RefreshIcon, CheckIcon, XIcon, LoadingIcon, UploadFileIcon } from './Icons';
 
 function useTokenFromUrl(): string {
   return useMemo(() => {
@@ -109,88 +110,204 @@ export default function ClientForm() {
   }, [token, name, cpf, photoDataUrl, consentAccepted]);
 
   return (
-    <div className="page-shell">
-      <header className="page-header">
-        <div className="page-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, fontSize: 18 }}>Link-Face</div>
-          <div style={{ fontSize: 13, color: '#6b7280' }}>Verificação segura</div>
+    <div className="app-container">
+      <div className="main-card">
+        {/* Header */}
+        <div className="app-header">
+          <div className="app-logo">
+            <span className="logo-link">Link</span>
+            <span className="logo-face">-Face</span>
+          </div>
+          <p className="app-subtitle">Verificação de Identidade Segura</p>
         </div>
-      </header>
-      <main className="main">
-        <div className="form-wrap">
-          <div className="card">
-            <h1 style={{ margin: 0, fontSize: 22 }}>Confirmação de identidade</h1>
-            <p style={{ margin: '8px 0 0', color: '#6b7280' }}>Preencha seus dados e envie uma foto nítida.</p>
-            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>Nome completo</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Maria Silva" style={{ width: '100%', padding: '11px 12px', border: '1px solid #d0d0d5', borderRadius: 10, fontSize: 16 }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 14, marginBottom: 6 }}>CPF</label>
-                  <input value={cpf} onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="00000000000" inputMode="numeric" style={{ width: '100%', padding: '11px 12px', border: '1px solid #d0d0d5', borderRadius: 10, fontSize: 16 }} />
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>Apenas números; validamos automaticamente.</div>
-                </div>
-              </div>
-              <div>
-                <div className="tabs">
-                  <button onClick={() => setMode('camera')} className={`tab ${mode === 'camera' ? 'tab-active' : ''}`}>Câmera</button>
-                  <button onClick={() => setMode('upload')} className={`tab ${mode === 'upload' ? 'tab-active' : ''}`}>Upload</button>
-                </div>
-                {mode === 'camera' && (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="media-box">
-                      <video ref={videoRef} playsInline autoPlay muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                      <button onClick={enableCamera} className="btn btn-accent">Ativar câmera</button>
-                      <button onClick={capturePhoto} className="btn btn-primary">Tirar foto</button>
-                    </div>
-                  </div>
-                )}
-                {mode === 'upload' && (
-                  <div style={{ marginTop: 12, border: '1px dashed #d1d5db', borderRadius: 12, padding: 16, textAlign: 'center', background: '#f9fafb' }}>
-                    <div style={{ fontSize: 14, color: '#6b7280' }}>Selecione uma imagem do seu dispositivo</div>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                      <button onClick={() => fileInputRef.current?.click()} className="btn btn-primary">Escolher arquivo</button>
-                    </div>
-                    <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={onPickFile} />
-                  </div>
-                )}
-                {photoDataUrl && (
-                  <div style={{ marginTop: 12 }}>
-                    <img src={photoDataUrl} alt="Prévia" style={{ width: '100%', borderRadius: 12, objectFit: 'cover' }} />
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                      <button onClick={() => setPhotoDataUrl('')} className="btn btn-muted" style={{ padding: '8px 10px' }}>Trocar foto</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div style={{ marginTop: 16, padding: 16, background: '#f9fafb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
-                <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={consentAccepted} 
-                    onChange={(e) => setConsentAccepted(e.target.checked)}
-                    style={{ marginTop: 2, cursor: 'pointer', width: 18, height: 18 }}
-                  />
-                  <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
-                    Autorizo a coleta, armazenamento e a utilização da minha imagem facial exclusivamente para atualização de cadastro e identificação no sistema de registro de ponto eletrônico, conforme a legislação vigente e a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018).
-                  </div>
-                </label>
-              </div>
-              <button onClick={submit} disabled={!canSubmit || status.type === 'loading'} className="btn btn-primary" style={{ background: canSubmit ? undefined : '#9ca3af' }}>
-                {status.type === 'loading' ? 'Enviando...' : 'Enviar'}
-              </button>
-              {status.type === 'success' && <div style={{ color: '#16a34a', fontSize: 14 }}>{status.msg}</div>}
-              {status.type === 'error' && <div style={{ color: '#dc2626', fontSize: 14 }}>{status.msg}</div>}
+
+        {/* Título */}
+        <h1 className="section-title">Confirmação de Identidade</h1>
+        <p className="section-description">
+          Preencha seus dados e envie uma foto nítida para verificação
+        </p>
+
+        <div className="form-container">
+          {/* Campos de entrada */}
+          <div className="form-grid">
+            <div>
+              <label htmlFor="name" className="form-label">
+                Nome Completo
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex.: Maria Silva"
+                className="form-input"
+              />
+            </div>
+            <div>
+              <label htmlFor="cpf" className="form-label">
+                CPF
+              </label>
+              <input
+                id="cpf"
+                type="text"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="00000000000"
+                inputMode="numeric"
+                className="form-input"
+              />
+              <p className="form-hint">Apenas números</p>
             </div>
           </div>
+
+          {/* Seção de foto */}
+          <div className="photo-section">
+            {/* Tabs de modo */}
+            <div className="mode-tabs">
+              <button
+                onClick={() => setMode('camera')}
+                className={`mode-tab ${mode === 'camera' ? 'mode-tab-active' : 'mode-tab-inactive'}`}
+              >
+                <CameraIcon className="w-5 h-5" />
+                <span>Câmera</span>
+              </button>
+              <button
+                onClick={() => setMode('upload')}
+                className={`mode-tab ${mode === 'upload' ? 'mode-tab-active' : 'mode-tab-inactive'}`}
+              >
+                <UploadIcon className="w-5 h-5" />
+                <span>Upload</span>
+              </button>
+            </div>
+
+            {/* Modo Câmera */}
+            {mode === 'camera' && !photoDataUrl && (
+              <div className="space-y-4">
+                <div className="media-container">
+                  <video 
+                    ref={videoRef} 
+                    playsInline 
+                    autoPlay 
+                    muted 
+                    className="w-full h-full"
+                  />
+                </div>
+                <div className="action-buttons">
+                  <button 
+                    onClick={enableCamera} 
+                    className="btn btn-secondary btn-full sm:flex-1"
+                  >
+                    <CameraIcon className="w-5 h-5" />
+                    <span>Ativar Câmera</span>
+                  </button>
+                  <button 
+                    onClick={capturePhoto} 
+                    className="btn btn-primary btn-full sm:flex-1"
+                  >
+                    <CameraIcon className="w-5 h-5" />
+                    <span>Capturar Foto</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modo Upload */}
+            {mode === 'upload' && !photoDataUrl && (
+              <div
+                className="upload-zone"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="upload-icon-wrapper">
+                  <UploadFileIcon className="w-20 h-20 text-gray-400" />
+                </div>
+                <p className="upload-text">Clique para selecionar uma imagem</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="btn btn-primary mx-auto"
+                >
+                  <UploadIcon className="w-5 h-5" />
+                  <span>Escolher Arquivo</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={onPickFile}
+                />
+              </div>
+            )}
+
+            {/* Preview da foto */}
+            {photoDataUrl && (
+              <div className="space-y-4">
+                <div className="photo-preview-container">
+                  <img src={photoDataUrl} alt="Prévia da foto" />
+                </div>
+                <button
+                  onClick={() => setPhotoDataUrl('')}
+                  className="btn btn-outline btn-full"
+                >
+                  <RefreshIcon className="w-5 h-5" />
+                  <span>Trocar Foto</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Termo de consentimento */}
+          <div className="consent-wrapper">
+            <label className="consent-checkbox-wrapper">
+              <input
+                type="checkbox"
+                checked={consentAccepted}
+                onChange={(e) => setConsentAccepted(e.target.checked)}
+                className="consent-checkbox"
+              />
+              <div className="consent-text">
+                <strong>Autorizo</strong> a coleta, armazenamento e utilização da minha imagem facial exclusivamente para atualização de cadastro e identificação no sistema de registro de ponto eletrônico, conforme a legislação vigente e a <strong>Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018)</strong>.
+              </div>
+            </label>
+          </div>
+
+          {/* Botão de envio */}
+          <button
+            onClick={submit}
+            disabled={!canSubmit || status.type === 'loading'}
+            className="btn btn-primary btn-full"
+          >
+            {status.type === 'loading' ? (
+              <>
+                <LoadingIcon className="w-5 h-5" />
+                <span>Enviando...</span>
+              </>
+            ) : (
+              <>
+                <CheckIcon className="w-5 h-5" />
+                <span>Enviar Dados</span>
+              </>
+            )}
+          </button>
+
+          {/* Mensagens de status */}
+          {status.type === 'success' && (
+            <div className="status-alert status-success">
+              <CheckIcon className="w-5 h-5 flex-shrink-0" />
+              <span>{status.msg}</span>
+            </div>
+          )}
+          {status.type === 'error' && (
+            <div className="status-alert status-error">
+              <XIcon className="w-5 h-5 flex-shrink-0" />
+              <span>{status.msg}</span>
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
-
-
