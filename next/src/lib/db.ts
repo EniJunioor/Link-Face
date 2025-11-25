@@ -16,9 +16,21 @@ export function initDb(): void {
       name TEXT NOT NULL,
       cpf TEXT NOT NULL,
       phone TEXT,
+      email TEXT,
       token TEXT UNIQUE,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    
+    // Migração: Adiciona coluna email se não existir
+    db.all(`PRAGMA table_info(employees)`, (err, rows: any) => {
+      if (err) return;
+      const columns = Array.isArray(rows) ? rows.map((r: any) => r.name) : [];
+      if (!columns.includes('email')) {
+        db.run(`ALTER TABLE employees ADD COLUMN email TEXT`, (alterErr) => {
+          // Ignora erro se a coluna já existir
+        });
+      }
+    });
     db.run(`CREATE TABLE IF NOT EXISTS submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       employee_token TEXT,
@@ -134,11 +146,11 @@ export function getAllEmployees(): Promise<any[]> {
   });
 }
 
-export function createEmployee({ name, cpf, phone, token }: { name: string; cpf: string; phone?: string; token: string }): Promise<number> {
+export function createEmployee({ name, cpf, phone, email, token }: { name: string; cpf: string; phone?: string; email?: string; token: string }): Promise<number> {
   return new Promise((resolve, reject) => {
     db.run(
-      'INSERT INTO employees (name, cpf, phone, token) VALUES (?, ?, ?, ?)',
-      [name, cpf, phone || null, token],
+      'INSERT INTO employees (name, cpf, phone, email, token) VALUES (?, ?, ?, ?, ?)',
+      [name, cpf, phone || null, email || null, token],
       function onDone(this: sqlite3.RunResult, err: Error | null) {
         if (err) return reject(err);
         resolve(this.lastID);

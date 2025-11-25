@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDb, getAllSubmissions } from '../../../../src/lib/db';
+import { requireAuth } from '../../../../src/lib/auth';
 
 initDb();
 
 export async function GET(req: NextRequest) {
+  const auth = requireAuth(req);
+  if (!auth.authorized) {
+    return NextResponse.json({ ok: false, error: auth.error || 'Não autenticado' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const format = searchParams.get('format') || 'json';

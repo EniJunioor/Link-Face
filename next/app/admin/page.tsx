@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckIcon, XIcon, LoadingIcon, UploadIcon } from '../components/Icons';
 
 interface Submission {
@@ -22,26 +23,62 @@ interface Employee {
 }
 
 export default function AdminPanel() {
+  const router = useRouter();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [stats, setStats] = useState({ total: 0, today: 0, byEmployee: [] });
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
-  const [newEmployee, setNewEmployee] = useState({ name: '', cpf: '', phone: '' });
+  const [newEmployee, setNewEmployee] = useState({ name: '', cpf: '', phone: '', email: '' });
   const [showNewEmployee, setShowNewEmployee] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [selectedEmployee]);
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (authenticated) {
+      loadData();
+    }
+  }, [selectedEmployee, authenticated]);
+
+  const checkAuth = async () => {
+    try {
+      // Verifica se há sessão (cookie será enviado automaticamente)
+      const res = await fetch('/api/admin/submissions?limit=1');
+      if (res.ok) {
+        setAuthenticated(true);
+      } else if (res.status === 401) {
+        router.push('/admin/login');
+      }
+    } catch {
+      router.push('/admin/login');
+    }
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/admin/auth', { method: 'DELETE' });
+    router.push('/admin/login');
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [subsRes, empRes] = await Promise.all([
-        fetch(`/api/admin/submissions?${selectedEmployee ? `employee_token=${selectedEmployee}` : ''}`),
-        fetch('/api/admin/employees')
+        fetch(`/api/admin/submissions?${selectedEmployee ? `employee_token=${selectedEmployee}` : ''}`, {
+          credentials: 'include'
+        }),
+        fetch('/api/admin/employees', {
+          credentials: 'include'
+        })
       ]);
+
+      if (subsRes.status === 401 || empRes.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
 
       const subsData = await subsRes.json();
       const empData = await empRes.json();
@@ -68,7 +105,15 @@ export default function AdminPanel() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/submissions?search=${encodeURIComponent(searchTerm)}`);
+      const res = await fetch(`/api/admin/submissions?search=${encodeURIComponent(searchTerm)}`, {
+        credentials: 'include'
+      });
+      
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      
       const data = await res.json();
       if (data.ok) {
         setSubmissions(data.data);
@@ -83,7 +128,15 @@ export default function AdminPanel() {
   const handleExport = async (format: 'json' | 'csv') => {
     try {
       const url = `/api/admin/export?format=${format}${selectedEmployee ? `&employee_token=${selectedEmployee}` : ''}`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        credentials: 'include'
+      });
+      
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -103,12 +156,19 @@ export default function AdminPanel() {
       const res = await fetch('/api/admin/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(newEmployee)
       });
+      
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      
       const data = await res.json();
       if (data.ok) {
         alert(`Funcionário criado! Token: ${data.data.token}\nLink: ${data.data.link}`);
-        setNewEmployee({ name: '', cpf: '', phone: '' });
+        setNewEmployee({ name: '', cpf: '', phone: '', email: '' });
         setShowNewEmployee(false);
         loadData();
       }
@@ -117,12 +177,31 @@ export default function AdminPanel() {
     }
   };
 
+  if (!authenticated) {
+    return (
+      <div className="app-container">
+        <div className="main-card" style={{ maxWidth: '400px' }}>
+          <div className="flex justify-center py-12">
+            <LoadingIcon className="w-8 h-8" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <div className="main-card" style={{ maxWidth: '1200px' }}>
         <div className="app-header">
-          <h1 className="section-title">Painel Administrativo</h1>
-          <p className="section-description">Gerencie submissões e funcionários</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="section-title">Painel Administrativo</h1>
+              <p className="section-description">Gerencie submissões e funcionários</p>
+            </div>
+            <button onClick={handleLogout} className="btn btn-outline">
+              Sair
+            </button>
+          </div>
         </div>
 
         {/* Estatísticas */}
@@ -196,7 +275,7 @@ export default function AdminPanel() {
         {showNewEmployee && (
           <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-200">
             <h3 className="text-lg font-semibold mb-4">Criar Novo Funcionário</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
                 placeholder="Nome"
@@ -216,6 +295,13 @@ export default function AdminPanel() {
                 placeholder="Telefone (opcional)"
                 value={newEmployee.phone}
                 onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+                className="form-input"
+              />
+              <input
+                type="email"
+                placeholder="Email (opcional)"
+                value={newEmployee.email}
+                onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
                 className="form-input"
               />
             </div>

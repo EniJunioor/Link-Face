@@ -4,6 +4,9 @@ import { initDb, findEmployeeByToken, insertSubmission } from '../../../src/lib/
 import { uploadPhoto } from '../../../src/lib/storage';
 import { validateImage, sanitizeFileName } from '../../../src/lib/validations';
 import { checkRateLimit, getClientIP } from '../../../src/lib/rateLimit';
+import { compressImage } from '../../../src/lib/imageCompression';
+import { logger } from '../../../src/lib/logger';
+import { notifyNewSubmission } from '../../../src/lib/notifications';
 
 initDb();
 
@@ -63,12 +66,26 @@ export async function POST(req: NextRequest) {
     const base64 = match[2]!;
 
     // Converte base64 para buffer
-    const buffer = Buffer.from(base64, 'base64');
+    let buffer = Buffer.from(base64, 'base64');
 
     // Validações de segurança
     const validation = await validateImage(base64, mimeType, buffer);
     if (!validation.valid) {
+      logger.warn('Validação de imagem falhou', { error: validation.error, name, cpf });
       return NextResponse.json({ ok: false, error: validation.error }, { status: 400 });
+    }
+
+    // Comprime imagem antes do upload
+    logger.info('Comprimindo imagem', { originalSize: buffer.length, mimeType });
+    const compression = await compressImage(buffer, mimeType);
+    buffer = compression.buffer;
+    
+    if (compression.ratio < 1) {
+      logger.info('Imagem comprimida', {
+        originalSize: compression.originalSize,
+        compressedSize: compression.compressedSize,
+        ratio: `${(compression.ratio * 100).toFixed(1)}%`
+      });
     }
 
     const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
@@ -77,6 +94,7 @@ export async function POST(req: NextRequest) {
     const finalFileName = `${sanitizedName}_${Date.now()}.${ext}`;
 
     // Faz upload usando o serviço de storage configurado
+    logger.info('Fazendo upload da imagem', { fileName: finalFileName });
     const uploadResult = await uploadPhoto(buffer, finalFileName, mimeType);
     
     if (!uploadResult.success) {
@@ -91,7 +109,7 @@ export async function POST(req: NextRequest) {
     const photoPath = uploadResult.path || uploadResult.url || uploadResult.fileId || fileName;
     const storageFileId = uploadResult.fileId || uploadResult.url || null;
 
-    await insertSubmission({ 
+    const submissionId = await insertSubmission({ 
       employeeToken: token ?? null, 
       name, 
       cpf, 
@@ -99,11 +117,35 @@ export async function POST(req: NextRequest) {
       driveFileId: storageFileId,
       consentAccepted: consentAccepted === true
     });
+
+    logger.info('Submissão criada com sucesso', {
+      submissionId,
+      name,
+      cpf: cpf.replace(/\d(?=\d{4})/g, '*'), // Mascara CPF no log
+      employeeToken: token ? `${token.slice(0, 8)}...` : 'public'
+    });
+
+    // Envia notificação se houver funcionário associado
+    if (token) {
+      const employee = await findEmployeeByToken(token);
+      if (employee) {
+        notifyNewSubmission({
+          employeeName: employee.name,
+          employeeEmail: employee.email,
+          employeePhone: employee.phone,
+          clientName: name,
+          clientCpf: cpf
+        }).catch(err => {
+          logger.error('Erro ao enviar notificação', err);
+        });
+      }
+    }
     
     return NextResponse.json({ 
       ok: true, 
       fileId: storageFileId,
-      url: uploadResult.url 
+      url: uploadResult.url,
+      submissionId
     }, {
       headers: {
         'X-RateLimit-Limit': '10',
@@ -112,7 +154,7 @@ export async function POST(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error('Erro ao processar submissão:', error);
+    logger.error('Erro ao processar submissão', error, { name, cpf: cpf?.replace(/\d(?=\d{4})/g, '*') });
     return NextResponse.json({ 
       ok: false, 
       error: error?.message || 'Erro interno ao processar a solicitação.' 
