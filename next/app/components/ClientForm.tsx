@@ -13,6 +13,25 @@ function useTokenFromUrl(): string {
   }, []);
 }
 
+function formatCpf(value: string): string {
+  // Remove tudo que não é dígito
+  const digits = value.replace(/\D/g, '');
+  
+  // Limita a 11 dígitos
+  const limitedDigits = digits.slice(0, 11);
+  
+  // Aplica a formatação
+  if (limitedDigits.length <= 3) {
+    return limitedDigits;
+  } else if (limitedDigits.length <= 6) {
+    return `${limitedDigits.slice(0, 3)}.${limitedDigits.slice(3)}`;
+  } else if (limitedDigits.length <= 9) {
+    return `${limitedDigits.slice(0, 3)}.${limitedDigits.slice(3, 6)}.${limitedDigits.slice(6)}`;
+  } else {
+    return `${limitedDigits.slice(0, 3)}.${limitedDigits.slice(3, 6)}.${limitedDigits.slice(6, 9)}-${limitedDigits.slice(9)}`;
+  }
+}
+
 function isValidCpf(cpf: string): boolean {
   const digits = cpf.replace(/\D/g, '');
   if (digits.length !== 11) return false;
@@ -82,6 +101,21 @@ export default function ClientForm() {
   const onPickFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validação de tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setStatus({ type: 'error', msg: 'Tipo de arquivo não permitido. Use JPG, PNG ou WEBP.' });
+      return;
+    }
+
+    // Validação de tamanho (5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setStatus({ type: 'error', msg: 'Imagem muito grande. Tamanho máximo: 5MB' });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => setPhotoDataUrl(reader.result as string);
     reader.readAsDataURL(file);
@@ -151,12 +185,16 @@ export default function ClientForm() {
                 id="cpf"
                 type="text"
                 value={cpf}
-                onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="00000000000"
+                onChange={(e) => {
+                  const formatted = formatCpf(e.target.value);
+                  setCpf(formatted);
+                }}
+                placeholder="000.000.000-00"
                 inputMode="numeric"
                 className="form-input"
+                maxLength={14}
               />
-              <p className="form-hint">Apenas números</p>
+              <p className="form-hint">Digite apenas números</p>
             </div>
           </div>
 

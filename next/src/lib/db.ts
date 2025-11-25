@@ -66,4 +66,119 @@ export function insertSubmission({ employeeToken, name, cpf, photoPath, driveFil
   });
 }
 
+export function getAllSubmissions(limit: number = 100, offset: number = 0, employeeToken?: string | null): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    let query = 'SELECT * FROM submissions';
+    const params: any[] = [];
+    
+    if (employeeToken) {
+      query += ' WHERE employee_token = ?';
+      params.push(employeeToken);
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+    
+    db.all(query, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows as any[]);
+    });
+  });
+}
+
+export function searchSubmissions(searchTerm: string, limit: number = 100): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const term = `%${searchTerm}%`;
+    db.all(
+      `SELECT * FROM submissions 
+       WHERE name LIKE ? OR cpf LIKE ? 
+       ORDER BY created_at DESC 
+       LIMIT ?`,
+      [term, term, limit],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows as any[]);
+      }
+    );
+  });
+}
+
+export function getSubmissionById(id: number): Promise<any | null> {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM submissions WHERE id = ?', [id], (err, row) => {
+      if (err) return reject(err);
+      resolve((row as any) || null);
+    });
+  });
+}
+
+export function getSubmissionsByEmployeeToken(token: string): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    db.all(
+      'SELECT * FROM submissions WHERE employee_token = ? ORDER BY created_at DESC',
+      [token],
+      (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows as any[]);
+      }
+    );
+  });
+}
+
+export function getAllEmployees(): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM employees ORDER BY created_at DESC', [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows as any[]);
+    });
+  });
+}
+
+export function createEmployee({ name, cpf, phone, token }: { name: string; cpf: string; phone?: string; token: string }): Promise<number> {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'INSERT INTO employees (name, cpf, phone, token) VALUES (?, ?, ?, ?)',
+      [name, cpf, phone || null, token],
+      function onDone(this: sqlite3.RunResult, err: Error | null) {
+        if (err) return reject(err);
+        resolve(this.lastID);
+      }
+    );
+  });
+}
+
+export function getSubmissionStats(): Promise<{ total: number; today: number; byEmployee: any[] }> {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT COUNT(*) as total FROM submissions', [], (err, totalRow: any) => {
+      if (err) return reject(err);
+      
+      db.get(
+        "SELECT COUNT(*) as today FROM submissions WHERE DATE(created_at) = DATE('now')",
+        [],
+        (err, todayRow: any) => {
+          if (err) return reject(err);
+          
+          db.all(
+            `SELECT employee_token, COUNT(*) as count 
+             FROM submissions 
+             WHERE employee_token IS NOT NULL 
+             GROUP BY employee_token 
+             ORDER BY count DESC`,
+            [],
+            (err, byEmployeeRows: any) => {
+              if (err) return reject(err);
+              
+              resolve({
+                total: totalRow?.total || 0,
+                today: todayRow?.today || 0,
+                byEmployee: byEmployeeRows || []
+              });
+            }
+          );
+        }
+      );
+    });
+  });
+}
+
 
