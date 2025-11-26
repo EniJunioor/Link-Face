@@ -14,7 +14,7 @@ O **Link-Face** é uma aplicação web moderna que facilita o processo de verifi
 
 ## 🚀 Tecnologias
 
-- **Next.js 15** - Framework React com App Router
+- **Next.js 16** - Framework React com App Router
 - **TypeScript** - Tipagem estática
 - **SQLite** - Banco de dados local
 - **Sistema de Storage Flexível**:
