@@ -17,6 +17,7 @@ O **Link-Face** é uma aplicação web moderna que facilita o processo de verifi
 - **Next.js 16** - Framework React com App Router
 - **TypeScript** - Tipagem estática
 - **SQLite** - Banco de dados local
+- **Sharp** - Processamento e compressão de imagens
 - **Sistema de Storage Flexível**:
   - Vercel Blob Storage
   - AWS S3
@@ -81,14 +82,36 @@ A aplicação estará disponível em `http://localhost:3000`
 Crie um arquivo `.env` na pasta `next/` com as seguintes variáveis:
 
 ```env
-# Tipo de armazenamento: 'local', 'vercel-blob', 's3', 'drive'
-STORAGE_TYPE=local
-
-# Diretório para dados locais
+# Storage
+STORAGE_TYPE=local  # ou 'vercel-blob', 's3', 'drive'
 DATA_DIR=./data
-
-# URL da aplicação
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Validações de Imagem
+MAX_IMAGE_SIZE=5242880           # 5MB em bytes
+MAX_BASE64_SIZE=7000000          # ~7MB
+MIN_IMAGE_DIMENSION=200          # 200px mínimo
+ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp
+
+# Rate Limiting
+RATE_LIMIT_WINDOW=60000          # 1 minuto em ms
+RATE_LIMIT_MAX_REQUESTS=10       # 10 requisições
+
+# Autenticação Admin
+ADMIN_PASSWORD=seu_password_seguro  # Senha para acesso ao painel admin
+
+# Google Drive (quando STORAGE_TYPE=drive)
+GOOGLE_APPLICATION_CREDENTIALS=./gcp-service-account.json
+GOOGLE_DRIVE_FOLDER_ID=
+
+# AWS S3 (quando STORAGE_TYPE=s3)
+# AWS_ACCESS_KEY_ID=your_access_key
+# AWS_SECRET_ACCESS_KEY=your_secret_key
+# AWS_REGION=us-east-1
+# AWS_S3_BUCKET_NAME=your-bucket-name
+
+# Vercel Blob (quando STORAGE_TYPE=vercel-blob)
+# Usa automaticamente BLOB_READ_WRITE_TOKEN do Vercel
 ```
 
 Para mais detalhes sobre configuração de cada provider de storage, consulte o [Guia de Armazenamento](next/STORAGE.md).
@@ -97,24 +120,78 @@ Para mais detalhes sobre configuração de cada provider de storage, consulte o 
 
 - **[README do Next.js](next/README.md)** - Documentação completa da aplicação
 - **[Guia de Storage](next/STORAGE.md)** - Comparação e configuração dos providers de armazenamento
+- **[Funcionalidades](next/FEATURES.md)** - Lista completa de funcionalidades implementadas
+
+## ⚙️ Funcionalidades Técnicas
+
+### Sistema de Logs
+- ✅ Logs estruturados em JSON
+- ✅ Níveis: DEBUG, INFO, WARN, ERROR
+- ✅ Stack traces para erros
+- ✅ Contexto adicional em cada log
+- ✅ Filtro por ambiente (desenvolvimento/produção)
+
+### Sistema de Notificações
+- ✅ Suporte para email e SMS
+- ✅ Notificações automáticas em novas submissões
+- ✅ Integração preparada para SendGrid, Twilio, etc.
+- ✅ Modo console para desenvolvimento
+- ✅ Logs de todas as notificações
+
+### Compressão de Imagens
+- ✅ Redimensiona imagens grandes (máx 1920x1920px)
+- ✅ Comprime JPEG, PNG e WEBP
+- ✅ Qualidade configurável (padrão: 85%)
+- ✅ Logs de taxa de compressão
+- ✅ Fallback gracioso se Sharp não estiver disponível
+
+### Painel Administrativo
+- ✅ Dashboard com estatísticas em tempo real
+- ✅ Tabela de submissões com paginação
+- ✅ Busca em tempo real por nome ou CPF
+- ✅ Filtro por funcionário
+- ✅ Visualização de fotos
+- ✅ Criação e gerenciamento de funcionários
+- ✅ Exportação de dados em CSV ou JSON
+- ✅ Design responsivo e moderno
 
 ## 🎯 Funcionalidades
 
 ### Para Funcionários
-- Geração de links personalizados com token único
-- Acompanhamento de submissões de clientes
+- ✅ Geração de links personalizados com token único
+- ✅ Painel administrativo completo (`/admin`)
+- ✅ Visualização de todas as submissões em tempo real
+- ✅ Estatísticas e dashboard
+- ✅ Busca e filtros por nome, CPF ou funcionário
+- ✅ Exportação de dados em CSV ou JSON
+- ✅ Criação e gerenciamento de funcionários
+- ✅ Visualização de fotos enviadas pelos clientes
 
 ### Para Clientes
-- Interface simples e intuitiva
-- Validação automática de CPF
-- Captura de foto via câmera ou upload
-- Suporte mobile com HTTPS
+- ✅ Interface simples e intuitiva
+- ✅ Validação automática de CPF
+- ✅ Captura de foto via câmera ou upload
+- ✅ Suporte mobile com HTTPS
+- ✅ Validação de tamanho e tipo de imagem
+- ✅ Compressão automática de imagens grandes
 
 ## 🌐 Rotas
 
+### Rotas Públicas
 - **`/`** - Página inicial do formulário
 - **`/l/[token]`** - Formulário com token personalizado
 - **`POST /api/submit`** - Endpoint para envio de dados
+- **`GET /api/photos/[id]`** - Visualizar foto enviada
+- **`GET /api/health`** - Health check do sistema
+
+### Rotas Administrativas
+- **`/admin`** - Painel administrativo (requer autenticação)
+- **`/admin/login`** - Página de login
+- **`GET /api/admin/submissions`** - Listar todas as submissões
+- **`GET /api/admin/submissions?search=termo`** - Buscar submissões
+- **`GET /api/admin/employees`** - Listar funcionários
+- **`POST /api/admin/employees`** - Criar novo funcionário
+- **`GET /api/admin/export?format=csv|json`** - Exportar dados
 
 ## 📦 Providers de Storage
 
@@ -129,12 +206,38 @@ O sistema suporta múltiplos providers de armazenamento:
 
 Veja o [Guia de Storage](next/STORAGE.md) para mais detalhes.
 
-## 🔒 Segurança
+## 🔒 Segurança e Validações
 
-- Validação de CPF no cliente e servidor
-- Tokens únicos para cada funcionário
-- Armazenamento seguro de credenciais
-- Suporte a HTTPS para câmera em dispositivos móveis
+### Validações de Imagem
+- ✅ Validação de tamanho máximo (configurável, padrão: 5MB)
+- ✅ Validação de tipo de arquivo (apenas JPG, PNG, WEBP)
+- ✅ Validação de dimensões mínimas (configurável, padrão: 200x200px)
+- ✅ Validação de tamanho do Base64
+- ✅ Compressão automática de imagens grandes (máx 1920x1920px)
+
+### Proteções de Segurança
+- ✅ Rate limiting (10 requisições/minuto por IP/token, configurável)
+- ✅ Sanitização de nomes de arquivo (prevenção de path traversal)
+- ✅ Headers de segurança HTTP:
+  - X-Frame-Options
+  - X-Content-Type-Options
+  - X-XSS-Protection
+  - Strict-Transport-Security
+  - Referrer-Policy
+  - Permissions-Policy
+
+### Autenticação
+- ✅ Sistema de autenticação por senha no painel admin
+- ✅ Sessões seguras com cookies HttpOnly
+- ✅ Proteção de todas as rotas administrativas
+- ✅ Middleware de autenticação
+
+### Outros
+- ✅ Validação de CPF no cliente e servidor
+- ✅ Tokens únicos para cada funcionário
+- ✅ Armazenamento seguro de credenciais
+- ✅ Suporte a HTTPS para câmera em dispositivos móveis
+- ✅ Validação completa de variáveis de ambiente
 
 ## 🚀 Deploy
 
