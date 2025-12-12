@@ -78,7 +78,9 @@ export async function POST(req: NextRequest) {
     // Comprime imagem antes do upload
     logger.info('Comprimindo imagem', { originalSize: buffer.length, mimeType });
     const compression = await compressImage(buffer, mimeType);
-    buffer = compression.buffer as Buffer;
+    
+    // CORREÇÃO APLICADA AQUI (Linha 81)
+    buffer = Buffer.from(compression.buffer);
     
     if (compression.ratio < 1) {
       logger.info('Imagem comprimida', {
@@ -161,5 +163,3 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
-
-
