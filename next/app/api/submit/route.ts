@@ -25,6 +25,13 @@ function isValidCpf(cpf: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // CORREÇÃO 1: Declarar variáveis fora do try block para que sejam acessíveis no catch
+  let token: string | undefined;
+  let name: string | undefined;
+  let cpf: string | undefined;
+  let photoDataUrl: string | undefined;
+  let consentAccepted: boolean | undefined;
+  
   try {
     // Rate limiting
     const clientIP = getClientIP(req);
@@ -50,7 +57,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { token, name, cpf, photoDataUrl, consentAccepted } = await req.json();
+    // CORREÇÃO 1: Atribuir valores às variáveis declaradas acima
+    ({ token, name, cpf, photoDataUrl, consentAccepted } = await req.json());
+    
+    // As validações agora devem incluir a checagem se as variáveis foram atribuídas (embora req.json() devesse garantir isso em caso de sucesso)
     if (!name || !cpf || !photoDataUrl) return NextResponse.json({ ok: false, error: 'Campos obrigatórios ausentes.' }, { status: 400 });
     if (!isValidCpf(cpf)) return NextResponse.json({ ok: false, error: 'CPF inválido.' }, { status: 422 });
     if (!consentAccepted) return NextResponse.json({ ok: false, error: 'É necessário aceitar o termo de consentimento para prosseguir.' }, { status: 400 });
@@ -79,7 +89,7 @@ export async function POST(req: NextRequest) {
     logger.info('Comprimindo imagem', { originalSize: buffer.length, mimeType });
     const compression = await compressImage(buffer, mimeType);
     
-    // CORREÇÃO APLICADA AQUI (Linha 81)
+    // CORREÇÃO 2: Aplicar Buffer.from() para resolver o erro de tipagem anterior
     buffer = Buffer.from(compression.buffer);
     
     if (compression.ratio < 1) {
@@ -156,6 +166,7 @@ export async function POST(req: NextRequest) {
       }
     });
   } catch (error: any) {
+    // Agora 'name' e 'cpf' estão no escopo, mesmo que não tenham sido atribuídos (serão 'undefined')
     logger.error('Erro ao processar submissão', error, { name, cpf: cpf?.replace(/\d(?=\d{4})/g, '*') });
     return NextResponse.json({ 
       ok: false, 
